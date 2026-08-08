@@ -1,0 +1,81 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: sift-db
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-sift}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-siftpass}
+      - POSTGRES_DB=${POSTGRES_DB:-siftdb}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sift} -d ${POSTGRES_DB:-siftdb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  db-init:
+    image: erikbra/grate:2.0.0
+    container_name: sift-db-init
+    volumes:
+      - ./backend/db:/db
+    environment:
+      - DOTNET_BUNDLE_EXTRACT_BASE_DIR=/tmp
+      - HOME=/tmp
+    entrypoint: /bin/sh -c
+    command: '"./grate --sqlfilesdirectory=/db --connstring=\"Host=db;Port=5432;Database=${POSTGRES_DB:-siftdb};Username=${POSTGRES_USER:-sift};Password=${POSTGRES_PASSWORD:-siftpass};\" --databasetype=postgresql --schemaname=grate_sift --noninteractive --warnononetimescriptchanges --env=${GRATE_ENV:-Dev}"'
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'init'"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      db:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sift-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-sift}:${POSTGRES_PASSWORD:-siftpass}@db:5432/${POSTGRES_DB:-siftdb}
+      - LM_STUDIO_URL=${LM_STUDIO_URL:-http://host.docker.internal:1234/v1}
+      - SEARXNG_URL=${SEARXNG_URL:-http://searxng:8080}
+      - NAS_MOUNT_PATH=/mnt/big-storage
+    volumes:
+      - ${NAS_HOST_PATH:-/mnt/big-storage}:/mnt/big-storage
+      - ./data:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      db:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sift-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
