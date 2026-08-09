@@ -8,20 +8,22 @@ from tinytag import TinyTag
 logger = logging.getLogger("sift.metadata")
 
 def make_json_safe(obj: Any) -> Any:
-    """Recursively converts EXIF IFDRational, bytes, datetimes, and tuples into 100% JSON-safe types."""
-    if isinstance(obj, (str, int, float, bool)) or obj is None:
+    """Recursively converts EXIF IFDRational, bytes, datetimes, and tuples into 100% JSON-safe types, and strips null bytes for PostgreSQL."""
+    if isinstance(obj, str):
+        return obj.replace('\x00', '')
+    elif isinstance(obj, (int, float, bool)) or obj is None:
         return obj
     elif isinstance(obj, (list, tuple)):
         return [make_json_safe(item) for item in obj]
     elif isinstance(obj, dict):
-        return {str(k): make_json_safe(v) for k, v in obj.items()}
+        return {str(k).replace('\x00', ''): make_json_safe(v) for k, v in obj.items()}
     elif isinstance(obj, bytes):
         try:
-            return obj.decode("utf-8", errors="ignore")
+            return obj.decode("utf-8", errors="ignore").replace('\x00', '')
         except Exception:
-            return str(obj)
+            return str(obj).replace('\x00', '')
     else:
-        return str(obj)
+        return str(obj).replace('\x00', '')
 
 def extract_file_metadata(file_path: str) -> Dict[str, Any]:
     """

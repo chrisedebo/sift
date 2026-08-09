@@ -13,6 +13,7 @@ from services.scanner import scan_directory, detect_category
 from services.file_ops import execute_action, reject_action
 from services.assistant import encode_image_base64
 from db.models import FileRecord, ActionItem, SearxCache
+from config import settings
 
 # Create in-memory SQLite DB for testing
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -83,14 +84,20 @@ def test_scan_path_sanitization_guardrails():
         with open(file1, "w") as f:
             f.write("audio data")
 
-        # Test valid path
-        response = client.post("/api/files/scan", json={"target_path": temp_dir})
-        assert response.status_code == 200
+        original_mount = settings.NAS_MOUNT_PATH
+        settings.NAS_MOUNT_PATH = temp_dir
+        
+        try:
+            # Test valid path
+            response = client.post("/api/files/scan", json={"target_path": temp_dir})
+            assert response.status_code == 200
 
-        # Test non-existent path cleanly returns HTTP 400 with helpful detail
-        response = client.post("/api/files/scan", json={"target_path": "/invalid/nonexistent/folder/12345"})
-        assert response.status_code == 400
-        assert "does not exist" in response.json()["detail"]
+            # Test non-existent path cleanly returns HTTP 400 with helpful detail
+            response = client.post("/api/files/scan", json={"target_path": "/invalid/nonexistent/folder/12345"})
+            assert response.status_code == 400
+            assert "outside the authorized NAS mount path" in response.json()["detail"] or "does not exist" in response.json()["detail"]
+        finally:
+            settings.NAS_MOUNT_PATH = original_mount
 
 def test_directory_scan_and_list_files():
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -103,24 +110,30 @@ def test_directory_scan_and_list_files():
         with open(file2, "w") as f:
             f.write("dummy video content")
 
-        # Trigger scan API
-        response = client.post("/api/files/scan", json={"target_path": temp_dir, "force_rescan": True})
-        assert response.status_code == 200
-        scan_data = response.json()["data"]
-        assert scan_data["total_scanned"] == 2
-        assert scan_data["new_indexed"] == 2
+        original_mount = settings.NAS_MOUNT_PATH
+        settings.NAS_MOUNT_PATH = temp_dir
 
-        # List files API
-        response = client.get("/api/files/")
-        assert response.status_code == 200
-        files_data = response.json()
-        assert files_data["total"] == 2
+        try:
+            # Trigger scan API
+            response = client.post("/api/files/scan", json={"target_path": temp_dir, "force_rescan": True})
+            assert response.status_code == 200
+            scan_data = response.json()["data"]
+            assert scan_data["total_scanned"] == 2
+            assert scan_data["new_indexed"] == 2
 
-        # Stats API
-        response = client.get("/api/files/stats")
-        assert response.status_code == 200
-        stats = response.json()
-        assert stats["total_files"] == 2
+            # List files API
+            response = client.get("/api/files/")
+            assert response.status_code == 200
+            files_data = response.json()
+            assert files_data["total"] == 2
+
+            # Stats API
+            response = client.get("/api/files/stats")
+            assert response.status_code == 200
+            stats = response.json()
+            assert stats["total_files"] == 2
+        finally:
+            settings.NAS_MOUNT_PATH = original_mount
 
 def test_file_details_and_preview_endpoints():
     """Test GET /api/files/{id}/details and GET /api/files/{id}/preview endpoints."""

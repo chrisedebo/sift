@@ -4,6 +4,7 @@ import time
 import httpx
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 
 from config import settings
 from db.models import SearxCache
@@ -33,7 +34,7 @@ class SearXNGService:
                         "endpoint": self.base_url,
                         "error": f"HTTP {res.status_code}"
                     }
-        except Exception as e:
+        except httpx.RequestError as e:
             logger.error("SearXNG connection unreachable | endpoint='%s' error='%s'", self.base_url, str(e))
             return {
                 "status": "unreachable",
@@ -55,7 +56,7 @@ class SearXNGService:
                     results = json.loads(cached.results_json)
                     logger.info("SearXNG search cache hit | query='%s' results_count=%d", clean_query, len(results))
                     return results
-                except Exception:
+                except json.JSONDecodeError:
                     pass
 
         start_time = time.time()
@@ -89,14 +90,14 @@ class SearXNGService:
                         )
                         db.add(cache_entry)
                         db.commit()
-                    except Exception as e:
+                    except SQLAlchemyError as e:
                         db.rollback()
                         logger.warning("Failed to cache SearXNG results | query='%s' error='%s'", clean_query, str(e))
 
                 elapsed_ms = int((time.time() - start_time) * 1000)
                 logger.info("SearXNG search completed | query='%s' results_count=%d duration_ms=%d", clean_query, len(clean_results), elapsed_ms)
                 return clean_results
-        except Exception as e:
+        except httpx.RequestError as e:
             logger.error("SearXNG search failed | query='%s' error='%s'", clean_query, str(e))
             return []
 

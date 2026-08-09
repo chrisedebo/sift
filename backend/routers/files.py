@@ -137,12 +137,22 @@ def trigger_directory_scan(req: ScanRequest, db: Session = Depends(get_db)):
     target_path = req.target_path or settings.NAS_MOUNT_PATH
     force_rescan = req.force_rescan if req.force_rescan is not None else True
 
-    # Clean path string in case user pasted conversation text with embedded mount path
-    if "/mnt/big-storage" in target_path:
-        target_path = "/mnt/big-storage" + target_path.split("/mnt/big-storage", 1)[1]
-
-    if not os.path.isabs(target_path) and not os.path.exists(target_path):
-        target_path = os.path.join("/mnt/big-storage", target_path.lstrip("/"))
+    import pathlib
+    try:
+        if not os.path.isabs(target_path):
+            target_path = os.path.join(settings.NAS_MOUNT_PATH, target_path.lstrip("/"))
+            
+        resolved_path = pathlib.Path(target_path).resolve()
+        nas_mount_path = pathlib.Path(settings.NAS_MOUNT_PATH).resolve()
+        
+        if not resolved_path.is_relative_to(nas_mount_path):
+            raise ValueError(f"Path '{target_path}' is outside the authorized NAS mount path.")
+            
+        target_path = str(resolved_path)
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid path provided: {str(e)}")
 
     try:
         result = scan_directory(target_path, db, force_rescan=force_rescan)

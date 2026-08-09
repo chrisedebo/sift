@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from db.models import FileRecord
 from services.metadata_extractor import extract_file_metadata, make_json_safe
+from constants import SOFTWARE_EXTS, VIDEO_EXTS, AUDIO_EXTS, IMAGE_EXTS, DOC_EXTS
 
 logger = logging.getLogger("sift.scanner")
 
@@ -31,17 +32,13 @@ def get_file_hash(filepath: str, max_bytes: int = 10 * 1024 * 1024) -> Optional[
 def detect_category(filename: str, ext: str, mime: str) -> str:
     """Basic fallback category detector based on extension and MIME type."""
     ext = ext.lower().strip(".")
+    mime_lower = (mime or "").lower()
     
-    software_exts = {"iso", "dmg", "exe", "msi", "appimage", "deb", "rpm", "apk", "zip", "7z", "tar", "gz", "rar"}
-    video_exts = {"mp4", "mkv", "avi", "mov", "wmv", "flv", "webm", "m4v"}
-    audio_exts = {"mp3", "flac", "wav", "aac", "ogg", "m4a"}
-    doc_exts = {"pdf", "epub", "mobi", "docx", "xlsx", "pptx", "txt", "md"}
-    
-    if ext in software_exts or "x-executable" in mime or "x-iso9660-image" in mime:
+    if ext in SOFTWARE_EXTS or "x-executable" in mime_lower or "x-iso9660-image" in mime_lower:
         return "Software & Apps"
-    elif ext in video_exts or ext in audio_exts or mime.startswith("video/") or mime.startswith("audio/"):
+    elif ext in VIDEO_EXTS or ext in AUDIO_EXTS or ext in IMAGE_EXTS or mime_lower.startswith("video/") or mime_lower.startswith("audio/") or mime_lower.startswith("image/"):
         return "Media"
-    elif ext in doc_exts or mime.startswith("text/") or "pdf" in mime:
+    elif ext in DOC_EXTS or mime_lower.startswith("text/") or "pdf" in mime_lower:
         return "Documents"
     else:
         return "Archives & Other"
@@ -85,7 +82,7 @@ def scan_directory(target_path: str, db: Session, force_rescan: bool = False) ->
                 try:
                     disk_meta = extract_file_metadata(full_path)
                     safe_meta = make_json_safe(disk_meta)
-                    meta_json = json.dumps(safe_meta, default=str)
+                    meta_json = json.dumps(safe_meta, default=str).replace('\\u0000', '')
                 except Exception as meta_err:
                     logger.warning("Failed to serialize metadata for '%s': %s", full_path, str(meta_err))
 
@@ -93,8 +90,9 @@ def scan_directory(target_path: str, db: Session, force_rescan: bool = False) ->
 
                 if existing_record:
                     # Refresh metadata if force_rescan=True OR file_size changed OR enriched_data is missing
-                    if force_rescan or existing_record.file_size != file_size or not existing_record.enriched_data:
+                    if force_rescan or existing_record.file_size != file_size or not existing_record.enriched_data or existing_record.category != category:
                         existing_record.file_size = file_size
+                        existing_record.category = category
                         if meta_json:
                             existing_record.enriched_data = meta_json
                         existing_record.updated_at = datetime.utcnow()

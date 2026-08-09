@@ -9,10 +9,16 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        background: '#0b0f19',
-        card: '#131b2e',
-        accent: '#6366f1',
-        sidebar: '#0d1322',
+        background: 'var(--bg-dark)',
+        card: 'var(--bg-card)',
+        primary: 'var(--color-primary)',
+        secondary: 'var(--color-secondary)',
+        accent: 'var(--color-primary)',
+        'neon-pink': 'var(--color-neon-pink)',
+        'neon-orange': 'var(--color-neon-orange)',
+        'neon-yellow': 'var(--color-neon-yellow)',
+        'neon-blue': 'var(--color-neon-blue)',
+        'neon-purple': 'var(--color-neon-purple)',
       },
     },
   },

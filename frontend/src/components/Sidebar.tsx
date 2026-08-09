@@ -20,16 +20,16 @@ export default function Sidebar({
   health
 }: SidebarProps) {
   return (
-    <aside className="w-64 bg-[#0d1322] border-r border-gray-800 flex flex-col justify-between p-4 shrink-0">
+    <aside className="w-64 glass-panel flex flex-col justify-between p-4 shrink-0 border-r-0 border-y-0 border-l-0 border-r border-white/5">
       <div>
         {/* Logo Header */}
-        <div className="flex items-center gap-3 px-3 py-4 mb-6 border-b border-gray-800/60">
-          <div className="bg-indigo-600/20 p-2.5 rounded-xl border border-indigo-500/30 text-indigo-400">
+        <div className="flex items-center gap-3 px-3 py-4 mb-6 border-b border-white/10">
+          <div className="p-2.5 rounded-xl futuristic-btn active">
             <Sparkles className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="font-bold text-xl tracking-tight text-white">sift</h1>
-            <p className="text-xs text-indigo-400 font-medium">NAS Media & File AI</p>
+            <h1 className="font-bold text-xl tracking-tight text-white neon-text">sift</h1>
+            <p className="text-[10px] text-neon-blue font-medium uppercase tracking-wider">NAS Media & File AI</p>
           </div>
         </div>
 
@@ -39,8 +39,8 @@ export default function Sidebar({
             onClick={() => setActiveTab('dashboard')}
             className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition ${
               activeTab === 'dashboard'
-                ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30'
-                : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200'
+                ? 'futuristic-btn active'
+                : 'text-gray-400 hover:text-white futuristic-btn'
             }`}
           >
             <Database className="w-4 h-4" />
@@ -50,8 +50,8 @@ export default function Sidebar({
             onClick={() => setActiveTab('explorer')}
             className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition ${
               activeTab === 'explorer'
-                ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30'
-                : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200'
+                ? 'futuristic-btn active'
+                : 'text-gray-400 hover:text-white futuristic-btn'
             }`}
           >
             <FolderSearch className="w-4 h-4" />
@@ -64,8 +64,8 @@ export default function Sidebar({
             onClick={() => setActiveTab('queue')}
             className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition ${
               activeTab === 'queue'
-                ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30'
-                : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200'
+                ? 'futuristic-btn active'
+                : 'text-gray-400 hover:text-white futuristic-btn'
             }`}
           >
             <Layers className="w-4 h-4" />
@@ -80,8 +80,8 @@ export default function Sidebar({
             onClick={() => setActiveTab('settings')}
             className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition ${
               activeTab === 'settings'
-                ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30'
-                : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200'
+                ? 'futuristic-btn active'
+                : 'text-gray-400 hover:text-white futuristic-btn'
             }`}
           >
             <SettingsIcon className="w-4 h-4" />
@@ -91,7 +91,7 @@ export default function Sidebar({
       </div>
 
       {/* Footer Status Indicators */}
-      <div className="bg-[#131b2e] border border-gray-800 rounded-xl p-3.5 space-y-2 text-xs">
+      <div className="glass-panel rounded-xl p-3.5 space-y-2 text-xs">
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-2 text-gray-400">
             <Server className="w-3.5 h-3.5 text-indigo-400" />

@@ -68,7 +68,30 @@ async def assistant_chat(req: ChatRequest, db: Session = Depends(get_db)):
             "target_files": res.get("target_files", [])
         }
 
-    # 3. File Organization / Relocation Action Intent
+    # 3. Execute Queue Intent (Autonomous Agent Approval & Execution)
+    if parsed.intent_type == IntentType.EXECUTE_QUEUE:
+        pending = db.query(ActionItem).filter(ActionItem.status == "pending").all()
+        for item in pending:
+            item.status = "approved"
+        db.commit()
+
+        approved = db.query(ActionItem).filter(ActionItem.status == "approved").all()
+        executed_count = 0
+        from services.file_ops import execute_action
+        for item in approved:
+            try:
+                execute_action(item.id, db)
+                executed_count += 1
+            except Exception as e:
+                logger.error(f"Failed to execute action {item.id}: {e}")
+                
+        reply = f"**Agent Execution Complete:** Auto-approved and executed {executed_count} actions successfully. The NAS is organized."
+        return {
+            "type": "qa",
+            "reply": reply
+        }
+
+    # 4. File Organization / Relocation Action Intent
     query = db.query(FileRecord).filter(FileRecord.status.in_(["indexed", "categorized", "action_pending"]))
     if req.file_ids:
         query = query.filter(FileRecord.id.in_(req.file_ids))

@@ -1,3 +1,4 @@
+import os
 import json
 import logging
 import time
@@ -52,7 +53,7 @@ async def categorize_and_enrich_file(
     db.commit()
 
     # Extract or parse disk metadata
-    disk_meta = extract_file_metadata(file_record.file_path)
+    disk_meta = extract_file_metadata(file_record.file_path) or {}
     file_record.enriched_data = json.dumps(disk_meta) if disk_meta else file_record.enriched_data
 
     # Build search query from filename (strip extensions and special chars)

@@ -23,7 +23,7 @@ export default function Header({
   setIsChatOpen
 }: HeaderProps) {
   return (
-    <header className="h-16 border-b border-gray-800 bg-[#0d1322]/80 backdrop-blur px-6 flex items-center justify-between shrink-0">
+    <header className="h-16 border-b border-white/10 glass-panel px-6 flex items-center justify-between shrink-0">
       <div className="flex items-center gap-4">
         <span className="text-sm font-semibold text-gray-300">
           {activeTab === 'dashboard' && 'Dashboard Overview'}
@@ -33,19 +33,19 @@ export default function Header({
         </span>
 
         {/* Target Path Scanner Input */}
-        <div className="flex items-center gap-2 bg-[#131b2e] border border-gray-800 rounded-lg px-3 py-1.5 text-xs">
+        <div className="flex items-center gap-2 glass-panel rounded-lg px-3 py-1.5 text-xs">
           <HardDrive className="w-3.5 h-3.5 text-indigo-400" />
           <input
             type="text"
             value={scanPath}
             onChange={(e) => setScanPath(e.target.value)}
-            className="bg-transparent text-gray-200 outline-none w-48 font-mono"
+            className="bg-transparent text-gray-200 outline-none w-72 font-mono"
             placeholder="/mnt/big-storage"
           />
           <button
             onClick={onScan}
             disabled={isScanning}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-2.5 py-1 rounded transition disabled:opacity-50 flex items-center gap-1.5"
+            className="futuristic-btn active text-white font-medium px-2.5 py-1 rounded transition disabled:opacity-50 flex items-center gap-1.5"
           >
             <RefreshCw className={`w-3 h-3 ${isScanning ? 'animate-spin' : ''}`} />
             {isScanning ? 'Scanning...' : 'Scan'}
@@ -56,9 +56,9 @@ export default function Header({
       <div className="flex items-center gap-3">
         <button
           onClick={() => setIsChatOpen(!isChatOpen)}
-          className="bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 text-xs px-3.5 py-2 rounded-lg transition flex items-center gap-2"
+          className="futuristic-btn text-xs px-3.5 py-2 rounded-lg flex items-center gap-2 text-white"
         >
-          <Bot className="w-4 h-4 text-indigo-400" />
+          <Bot className="w-4 h-4 text-neon-blue" />
           {isChatOpen ? 'Hide AI Chat' : 'Open AI Chat Assistant'}
         </button>
       </div>

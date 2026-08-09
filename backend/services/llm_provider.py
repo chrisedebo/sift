@@ -40,7 +40,7 @@ class LLMProvider:
                         "endpoint": self.base_url,
                         "error": f"HTTP {res.status_code}: {res.text}"
                     }
-        except Exception as e:
+        except httpx.RequestError as e:
             logger.error("LM Studio connection unreachable | endpoint='%s' error='%s'", self.base_url, str(e))
             return {
                 "status": "unreachable",
@@ -97,9 +97,9 @@ class LLMProvider:
             elapsed_ms = int((time.time() - start_time) * 1000)
             logger.error("LLM completion timed out after %d ms | timeout_setting=%.1fs model='%s'", elapsed_ms, settings.LM_TIMEOUT, self.model)
             raise TimeoutError(f"LM Studio local model generation timed out after {int(settings.LM_TIMEOUT)}s. Please try again or simplify your query.")
-        except Exception as e:
+        except httpx.RequestError as e:
             elapsed_ms = int((time.time() - start_time) * 1000)
-            logger.error("LLM completion exception after %d ms | error='%s'", elapsed_ms, str(e), exc_info=True)
-            raise
+            logger.error("LLM completion request error after %d ms | error='%s'", elapsed_ms, str(e), exc_info=True)
+            raise RuntimeError(f"LLM request failed: {str(e)}")
 
 llm_client = LLMProvider()

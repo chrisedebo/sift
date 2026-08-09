@@ -8,8 +8,7 @@ import DashboardTab from '../components/DashboardTab';
 import FilesExplorerTab from '../components/FilesExplorerTab';
 import ApprovalQueueTab from '../components/ApprovalQueueTab';
 import SettingsTab from '../components/SettingsTab';
-import AIChatDrawer, { ChatMessage } from '../components/AIChatDrawer';
-import FileDetailsModal from '../components/FileDetailsModal';
+import IntelligencePanel, { ChatMessage } from '../components/IntelligencePanel';
 
 import { 
   fetchFiles, 
@@ -93,7 +92,7 @@ export default function Home() {
       setQueue(queueRes.items);
       setQueueTotal(queueRes.total);
       if (healthRes) setHealth(healthRes);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error loading data:', err);
     } finally {
       setIsLoading(false);
@@ -147,8 +146,9 @@ export default function Home() {
       setStatusMessage(msg);
       addChatMessage('ai', `Scanned folder '${scanPath}' — ${res.data.new_indexed} new files indexed, ${res.data.updated_indexed} files refreshed with deep ID3/EXIF metadata.`);
       await loadData();
-    } catch (err: any) {
-      setStatusMessage(`Scan failed: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setStatusMessage(`Scan failed: ${msg}`);
     } finally {
       setIsScanning(false);
     }
@@ -160,8 +160,9 @@ export default function Home() {
       setStatusMessage(`Cleared ${res.deleted_count} pending proposals from the approval queue.`);
       addChatMessage('ai', `Cleared ${res.deleted_count} pending proposals from the approval queue.`);
       await loadData();
-    } catch (err: any) {
-      setStatusMessage(`Error clearing queue: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setStatusMessage(`Error clearing queue: ${msg}`);
     }
   };
 
@@ -201,8 +202,9 @@ export default function Home() {
         await loadData();
         setActiveTab('queue');
       }
-    } catch (err: any) {
-      addChatMessage('ai', `Error answering query: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      addChatMessage('ai', `Error answering query: ${msg}`);
     } finally {
       setIsAnalyzing(false);
     }
@@ -212,8 +214,21 @@ export default function Home() {
     try {
       await approveAction(actionId);
       await loadData();
-    } catch (err: any) {
-      setStatusMessage(`Error approving action: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setStatusMessage(`Error approving action: ${msg}`);
+    }
+  };
+
+  const handleApproveBulk = async (actionIds: number[]) => {
+    try {
+      for (const id of actionIds) {
+        await approveAction(id);
+      }
+      await loadData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setStatusMessage(`Error approving bulk actions: ${msg}`);
     }
   };
 
@@ -221,8 +236,21 @@ export default function Home() {
     try {
       await rejectAction(actionId);
       await loadData();
-    } catch (err: any) {
-      setStatusMessage(`Error rejecting action: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setStatusMessage(`Error rejecting action: ${msg}`);
+    }
+  };
+
+  const handleRejectBulk = async (actionIds: number[]) => {
+    try {
+      for (const id of actionIds) {
+        await rejectAction(id);
+      }
+      await loadData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setStatusMessage(`Error rejecting bulk actions: ${msg}`);
     }
   };
 
@@ -231,8 +259,9 @@ export default function Home() {
       await executeAction(actionId);
       setStatusMessage(`Executed action ID ${actionId} safely on disk.`);
       await loadData();
-    } catch (err: any) {
-      setStatusMessage(`Error executing action: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setStatusMessage(`Error executing action: ${msg}`);
     }
   };
 
@@ -242,15 +271,16 @@ export default function Home() {
       setStatusMessage(`Executed ${res.executed_count} approved file actions.`);
       addChatMessage('ai', `Executed ${res.executed_count} approved file actions safely on disk.`);
       await loadData();
-    } catch (err: any) {
-      setStatusMessage(`Execution error: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setStatusMessage(`Execution error: ${msg}`);
     }
   };
 
   const pendingQueueCount = queue.filter(q => q.status === 'pending' || q.status === 'approved').length;
 
   return (
-    <div className="flex h-screen bg-[#0b0f19] text-gray-100 overflow-hidden font-sans relative">
+    <div className="flex h-screen bg-background text-gray-100 overflow-hidden font-sans relative">
       {/* Sidebar Component */}
       <Sidebar
         activeTab={activeTab}
@@ -261,7 +291,7 @@ export default function Home() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col overflow-hidden bg-[#0b0f19]">
+      <main className="flex-1 flex flex-col overflow-hidden bg-background relative z-0">
         {/* Header Component */}
         <Header
           activeTab={activeTab}
@@ -275,7 +305,7 @@ export default function Home() {
 
         {/* Live Status Notification Banner */}
         {statusMessage && !isAnalyzing && (
-          <div className="bg-indigo-950/60 border-b border-indigo-800/40 px-6 py-2 text-xs text-indigo-300 flex items-center justify-between">
+          <div className="glass-panel border-b border-white/10 px-6 py-2 text-xs text-neon-blue flex items-center justify-between">
             <span>{statusMessage}</span>
             <button onClick={() => setStatusMessage(null)} className="hover:text-white">✕</button>
           </div>
@@ -302,25 +332,25 @@ export default function Home() {
               selectedCategory={selectedCategory}
               setSelectedCategory={setSelectedCategory}
               formatBytes={formatBytes}
-              onAddPathToChat={handleAddPathToChat}
-              onSendChatCommand={handleSendChatCommand}
-              onSelectFileDetails={(id) => setSelectedFileId(id)}
+              onSelectFileDetails={(id) => {
+                setSelectedFileId(id);
+                setIsChatOpen(true);
+              }}
             />
           )}
 
           {activeTab === 'queue' && (
             <ApprovalQueueTab
               queue={queue}
-              itemPrompts={itemPrompts}
-              setItemPrompts={setItemPrompts}
               onClearQueue={handleClearQueueAction}
               onExecuteAllApproved={handleExecuteAllApproved}
-              onApprove={handleApprove}
-              onReject={handleReject}
+              onApproveBulk={handleApproveBulk}
+              onRejectBulk={handleRejectBulk}
               onExecute={handleExecute}
-              onAddPathToChat={handleAddPathToChat}
-              onSendChatCommand={handleSendChatCommand}
-              onSelectFileDetails={(id) => setSelectedFileId(id)}
+              onSelectFileDetails={(id) => {
+                setSelectedFileId(id);
+                setIsChatOpen(true);
+              }}
             />
           )}
 
@@ -335,30 +365,16 @@ export default function Home() {
         </div>
       </main>
 
-      {/* File Details & Metadata Preview Modal */}
-      <FileDetailsModal
-        fileId={selectedFileId}
-        onClose={() => setSelectedFileId(null)}
-        onApprove={handleApprove}
-        onReject={handleReject}
-        onExecute={handleExecute}
-        onAddPathToChat={handleAddPathToChat}
-      />
-
-      {/* Floating AI Chat Assistant Drawer Component */}
-      <AIChatDrawer
-        isChatOpen={isChatOpen}
-        setIsChatOpen={setIsChatOpen}
+      <IntelligencePanel
+        isOpen={isChatOpen}
+        setIsOpen={setIsChatOpen}
         chatMessages={chatMessages}
         chatInput={chatInput}
         setChatInput={setChatInput}
         isAnalyzing={isAnalyzing}
-        progressCompleted={0}
-        progressTotal={0}
-        progressPercent={0}
-        pendingQueueCount={pendingQueueCount}
         onSendChatCommand={handleSendChatCommand}
         onNewConversation={handleNewConversation}
+        selectedFileId={selectedFileId}
       />
     </div>
   );

@@ -9,6 +9,7 @@ class IntentType(str, Enum):
     SCRIPTLET_EXECUTION = "scriptlet_execution"
     MEDIA_QA = "media_qa"
     FILE_ORGANIZATION = "file_organization"
+    EXECUTE_QUEUE = "execute_queue"
 
 class ParsedIntent:
     def __init__(self, intent_type: IntentType, raw_message: str, extracted_code: Optional[str] = None):
@@ -49,6 +50,12 @@ def parse_user_intent(message_text: str) -> ParsedIntent:
         logger.info("Parsed Intent: MEDIA_QA | text='%s'", text)
         return ParsedIntent(IntentType.MEDIA_QA, raw_message=text)
 
-    # 4. File Organization / Relocation Intent
+    # 4. Execute Queue Intent
+    execute_keywords = ["make it happen", "execute the queue", "execute all", "approve and execute", "looks perfect", "do it", "go ahead"]
+    if any(kw in text_lower for kw in execute_keywords):
+        logger.info("Parsed Intent: EXECUTE_QUEUE | text='%s'", text)
+        return ParsedIntent(IntentType.EXECUTE_QUEUE, raw_message=text)
+
+    # 5. File Organization / Relocation Intent
     logger.info("Parsed Intent: FILE_ORGANIZATION | text='%s'", text)
     return ParsedIntent(IntentType.FILE_ORGANIZATION, raw_message=text)

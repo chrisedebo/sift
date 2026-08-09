@@ -10,6 +10,7 @@ from services.llm_provider import llm_client
 from services.searxng import searx_client
 from services.metadata_extractor import extract_file_metadata
 from services.tools import tool_search_files, SearchFilesInput, FileCategoryEnum
+from constants import COMMON_SEARCHABLE_EXTS
 
 logger = logging.getLogger("sift.assistant")
 
@@ -67,7 +68,7 @@ async def answer_assistant_query(
     
     # 1. Dynamic Database Tool Search (Extension, Category, or List/Scan Query)
     ext_matched = None
-    for ext in [".flac", ".mp3", ".wav", ".jpg", ".jpeg", ".png", ".pdf", ".iso", ".mkv", ".tar.gz", ".zip", ".asd"]:
+    for ext in COMMON_SEARCHABLE_EXTS:
         tokens = query_lower.replace("?", " ").replace(".", " ").split()
         ext_clean = ext.lstrip(".")
         if ext in query_lower or ext_clean in tokens:
