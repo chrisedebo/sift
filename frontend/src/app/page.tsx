@@ -10,14 +10,14 @@ import ApprovalQueueTab from '../components/ApprovalQueueTab';
 import SettingsTab from '../components/SettingsTab';
 import IntelligencePanel, { ChatMessage } from '../components/IntelligencePanel';
 
-import { 
-  fetchFiles, 
-  fetchStats, 
-  triggerScan, 
-  fetchQueue, 
-  approveAction, 
-  rejectAction, 
-  executeAction, 
+import {
+  fetchFiles,
+  fetchStats,
+  triggerScan,
+  fetchQueue,
+  approveAction,
+  rejectAction,
+  executeAction,
   executeAllApproved,
   clearQueue,
   fetchHealth,
@@ -39,7 +39,7 @@ function formatBytes(bytes: number, decimals = 2) {
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'explorer' | 'queue' | 'settings'>('dashboard');
-  
+
   // Data states
   const [files, setFiles] = useState<FileItem[]>([]);
   const [totalFiles, setTotalFiles] = useState(0);
@@ -56,7 +56,7 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [scanPath, setScanPath] = useState('/mnt/big-storage');
   const [batchChunkSize, setBatchChunkSize] = useState(10);
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -336,6 +336,7 @@ export default function Home() {
                 setSelectedFileId(id);
                 setIsChatOpen(true);
               }}
+              onAddPathToChat={handleAddPathToChat}
             />
           )}
 

@@ -1,5 +1,5 @@
 import os
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
@@ -132,6 +132,117 @@ def preview_file(file_id: int, db: Session = Depends(get_db)):
         filename=file_record.filename
     )
 
+@router.get("/tree")
+def get_directory_tree(db: Session = Depends(get_db)):
+    """
+    Build a nested directory tree from all indexed file records in the database.
+    This endpoint provides the complete directory structure regardless of pagination limits.
+    """
+    records = db.query(FileRecord).all()
+    tree: Dict[str, Any] = {}
+
+    for rec in records:
+        parts = rec.file_path.strip('/').split('/')
+        current = tree
+        for part in parts[:-1]:
+            if part not in current:
+                current[part] = {"_dir": {}}
+            current = current[part]["_dir"]
+        current[parts[-1]] = {
+            "_file": {
+                "id": rec.id,
+                "filename": rec.filename,
+                "file_size": rec.file_size,
+                "extension": rec.extension,
+                "mime_type": rec.mime_type,
+                "category": rec.category,
+                "summary": rec.summary,
+                "status": rec.status,
+                "file_path": rec.file_path,
+            }
+        }
+
+    def extract_dirs(node):
+        """Extract only directory names from the tree node."""
+        dirs = []
+        for key, value in node.items():
+            if isinstance(value, dict) and "_dir" in value:
+                dirs.append(key)
+        return dirs
+
+    def build_tree(node):
+        """Build a clean tree structure with folders and files keys."""
+        result = {"folders": [], "files": []}
+        for key, value in node.items():
+            if isinstance(value, dict) and "_dir" in value:
+                child = build_tree(value["_dir"])
+                if child["folders"] or child["files"]:
+                    result["folders"].append({"name": key, "children": child})
+            elif isinstance(value, dict) and "_file" in value:
+                result["files"].append(value["_file"])
+        return result
+
+    tree_data = build_tree(tree)
+
+    return {
+        "total_files": len(records),
+        "tree": tree_data
+    }
+
+
+@router.get("/dir")
+def get_directory_contents(
+    path: str = Query(..., description="Directory path to list contents for"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get immediate children (folders and files) for a specific directory path.
+    Uses the database index to efficiently find all files under the given path.
+    Only returns direct children, not recursive descendants.
+    """
+    # Ensure path ends with / for proper prefix matching
+    if not path.endswith('/'):
+        search_path = path + '/'
+    else:
+        search_path = path
+
+    # Get all records under this path
+    records = db.query(FileRecord).filter(
+        FileRecord.file_path.like(search_path + '%')
+    ).all()
+
+    folders = set()
+    direct_files = []
+
+    for rec in records:
+        # Get the relative path from the search path
+        remainder = rec.file_path[len(search_path):]
+
+        # If there's a slash, the first segment is a subdirectory
+        if '/' in remainder:
+            first_segment = remainder.split('/')[0]
+            folders.add(first_segment)
+        elif remainder:
+            # Direct file child
+            direct_files.append({
+                "id": rec.id,
+                "filename": rec.filename,
+                "file_size": rec.file_size,
+                "extension": rec.extension,
+                "mime_type": rec.mime_type,
+                "category": rec.category,
+                "summary": rec.summary,
+                "status": rec.status,
+                "file_path": rec.file_path,
+            })
+
+    return {
+        "path": path,
+        "folders": sorted(folders),
+        "files": sorted(direct_files, key=lambda f: f["filename"].lower())
+    }
+
+
 @router.post("/scan")
 def trigger_directory_scan(req: ScanRequest, db: Session = Depends(get_db)):
     target_path = req.target_path or settings.NAS_MOUNT_PATH
@@ -141,13 +252,13 @@ def trigger_directory_scan(req: ScanRequest, db: Session = Depends(get_db)):
     try:
         if not os.path.isabs(target_path):
             target_path = os.path.join(settings.NAS_MOUNT_PATH, target_path.lstrip("/"))
-            
+
         resolved_path = pathlib.Path(target_path).resolve()
         nas_mount_path = pathlib.Path(settings.NAS_MOUNT_PATH).resolve()
-        
+
         if not resolved_path.is_relative_to(nas_mount_path):
             raise ValueError(f"Path '{target_path}' is outside the authorized NAS mount path.")
-            
+
         target_path = str(resolved_path)
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))

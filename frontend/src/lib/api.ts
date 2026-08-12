@@ -14,6 +14,27 @@ export interface FileItem {
   updated_at: string;
 }
 
+export interface DirectoryNode {
+  name: string;
+  children: DirectoryNode;
+}
+
+export interface DirectoryTree {
+  folders: Array<{ name: string; children: DirectoryTree }>;
+  files: FileItem[];
+}
+
+export interface DirectoryTreeResponse {
+  total_files: number;
+  tree: DirectoryTree;
+}
+
+export interface DirectoryContentsResponse {
+  path: string;
+  folders: string[];
+  files: FileItem[];
+}
+
 export interface ActionItem {
   id: number;
   file_id: number;
@@ -47,6 +68,18 @@ export interface HealthResponse {
     endpoint: string;
     error?: string;
   };
+}
+
+export async function fetchDirectoryTree(): Promise<DirectoryTreeResponse> {
+  const res = await fetch(`${API_BASE}/api/files/tree`);
+  if (!res.ok) throw new Error('Failed to fetch directory tree');
+  return res.json();
+}
+
+export async function fetchDirectoryContents(path: string): Promise<DirectoryContentsResponse> {
+  const res = await fetch(`${API_BASE}/api/files/dir?path=${encodeURIComponent(path)}`);
+  if (!res.ok) throw new Error('Failed to fetch directory contents');
+  return res.json();
 }
 
 export async function fetchFiles(category?: string, status?: string, search?: string, limit: number = 100): Promise<{ total: number; items: FileItem[] }> {
